@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# build_tools/defaults/main.yml — Build tools installation defaults
+
+---
+# Core build tools
+build_tools_packages:
+  - build-essential
+  - autoconf
+  - automake
+  - libtool
+  - pkg-config
+  - git
+  - git-lfs
+  - curl
+  - wget
+  - jq
+  - unzip
+  - zip
+  - tar
+  - gzip
+  - bzip2
+  - xz-utils
+  - patch
+
+# Git configuration
+build_tools_git_user_name: "GitHub Actions"
+build_tools_git_user_email: "actions@github.com"
+build_tools_git_safe_directory: "*"

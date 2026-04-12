@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# container_base/defaults/main.yml — Base LXC container defaults
+
+---
+# Container naming and identification
+container_base_name: "gh-runner"
+container_hostname: "{{ container_base_name }}-{{ inventory_hostname_short }}"
+
+# System packages to install
+container_base_packages:
+  - curl
+  - wget
+  - openssh-client
+  - openssh-server
+  - systemd
+  - sudo
+  - ca-certificates
+  - net-tools
+  - iputils-ping
+  - dnsutils
+
+# User configuration
+container_base_runner_user: ubuntu
+container_base_runner_uid: 1001
+container_base_runner_group: ubuntu
+container_base_runner_gid: 1001
+container_base_runner_shell: /bin/bash
+container_base_runner_home: /home/ubuntu
+
+# SSH configuration
+container_base_ssh_port: 22
+container_base_sshd_config: /etc/ssh/sshd_config
+
+# Sudo configuration
+container_base_sudo_nopasswd: true

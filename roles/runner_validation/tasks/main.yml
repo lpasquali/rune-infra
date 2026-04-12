@@ -1,0 +1,127 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# runner_validation/tasks/main.yml — Post-deployment health checks
+
+---
+- name: Initialize validation results
+  ansible.builtin.set_fact:
+    validation_results:
+      hostname: "{{ inventory_hostname }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      checks: {}
+
+- name: Check Docker installation
+  block:
+    - name: Verify Docker is running
+      ansible.builtin.command: docker ps
+      register: docker_check
+      changed_when: false
+      failed_when: false
+
+    - name: Record Docker check result
+      ansible.builtin.set_fact:
+        validation_results: "{{ validation_results | combine({
+          'checks': validation_results.checks | combine({
+            'docker': {
+              'status': 'passed' if docker_check.rc == 0 else 'failed',
+              'message': 'Docker daemon is running' if docker_check.rc == 0 else 'Docker daemon is not responding'
+            }
+          })
+        }, recursive=True) }}"
+
+  when: runner_validation_check_docker | bool
+
+- name: Check Git installation
+  block:
+    - name: Verify Git is installed
+      ansible.builtin.command: git --version
+      register: git_check
+      changed_when: false
+      failed_when: false
+
+    - name: Record Git check result
+      ansible.builtin.set_fact:
+        validation_results: "{{ validation_results | combine({
+          'checks': validation_results.checks | combine({
+            'git': {
+              'status': 'passed' if git_check.rc == 0 else 'failed',
+              'version': git_check.stdout if git_check.rc == 0 else 'N/A'
+            }
+          })
+        }, recursive=True) }}"
+
+  when: runner_validation_check_git | bool
+
+- name: Check build tools
+  block:
+    - name: Verify gcc is installed
+      ansible.builtin.command: gcc --version
+      register: gcc_check
+      changed_when: false
+      failed_when: false
+
+    - name: Verify make is installed
+      ansible.builtin.command: make --version
+      register: make_check
+      changed_when: false
+      failed_when: false
+
+    - name: Record build tools check result
+      ansible.builtin.set_fact:
+        validation_results: "{{ validation_results | combine({
+          'checks': validation_results.checks | combine({
+            'build_tools': {
+              'status': 'passed' if gcc_check.rc == 0 and make_check.rc == 0 else 'failed',
+              'gcc': 'installed' if gcc_check.rc == 0 else 'missing',
+              'make': 'installed' if make_check.rc == 0 else 'missing'
+            }
+          })
+        }, recursive=True) }}"
+
+  when: runner_validation_check_build_tools | bool
+
+- name: Check runner service
+  block:
+    - name: Get runner service status
+      ansible.builtin.systemd:
+        name: actions-runner
+      register: runner_service
+
+    - name: Record runner service check result
+      ansible.builtin.set_fact:
+        validation_results: "{{ validation_results | combine({
+          'checks': validation_results.checks | combine({
+            'runner_service': {
+              'status': 'passed' if runner_service.status.ActiveState == 'active' else 'failed',
+              'state': runner_service.status.ActiveState,
+              'enabled': runner_service.status.UnitFileState == 'enabled'
+            }
+          })
+        }, recursive=True) }}"
+
+  when: runner_validation_check_runner_service | bool
+
+- name: Create validation report directory
+  ansible.builtin.file:
+    path: "{{ runner_validation_report_dir }}"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  run_once: true
+
+- name: Write validation report
+  ansible.builtin.copy:
+    content: "{{ validation_results | to_nice_json }}"
+    dest: "{{ runner_validation_report_dir }}/{{ runner_validation_report_file }}"
+    mode: "0644"
+  delegate_to: localhost
+
+- name: Display validation results
+  ansible.builtin.debug:
+    msg: "{{ validation_results }}"
+
+- name: Fail if any check failed
+  ansible.builtin.fail:
+    msg: "Validation failed. See report for details."
+  when: validation_results.checks | dict2items | selectattr('value.status', 'equalto', 'failed') | list | length > 0

@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# github_runner/defaults/main.yml — GitHub Actions runner installation defaults
+
+---
+# Runner binary configuration
+github_runner_version: "2.323.0"
+github_runner_arch: "x64"
+github_runner_install_dir: /opt/actions-runner
+github_runner_user: ubuntu
+github_runner_group: ubuntu
+
+# GitHub configuration
+github_runner_github_org: "lpasquali"
+github_runner_github_repo: ""  # Empty for org-level runner; set for repo-level
+github_runner_github_token: ""  # Required; must be provided at runtime
+github_runner_github_api_url: "https://api.github.com"
+
+# Runner registration
+github_runner_name: ""  # Will default to hostname if not set
+github_runner_labels: []  # Additional labels (self-hosted, linux, x64 are auto-added)
+github_runner_runner_group: "Default"
+github_runner_work_dir: "_work"
+
+# Ephemeral runner configuration
+github_runner_ephemeral: true
+github_runner_disable_update: false
+
+# Service configuration
+github_runner_service_name: actions-runner
+github_runner_service_restart: "always"
+github_runner_service_restart_sec: 5

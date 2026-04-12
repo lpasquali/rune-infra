@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# github_runner/handlers/main.yml — Handlers for runner service management
+
+---
+- name: systemd daemon-reload
+  ansible.builtin.systemd:
+    daemon_reload: true

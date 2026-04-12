@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# container_base/tasks/main.yml — Prepare base LXC container environment
+
+---
+- name: Update APT cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Install base system packages
+  ansible.builtin.package:
+    name: "{{ container_base_packages }}"
+    state: present
+
+- name: Set container hostname
+  ansible.builtin.hostname:
+    name: "{{ container_hostname }}"
+    use: systemd
+
+- name: Update /etc/hosts with hostname
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "^127.0.0.1"
+    line: "127.0.0.1 localhost {{ container_hostname }}"
+    state: present
+
+- name: Ensure runner group exists
+  ansible.builtin.group:
+    name: "{{ container_base_runner_group }}"
+    gid: "{{ container_base_runner_gid }}"
+    state: present
+
+- name: Ensure runner user exists
+  ansible.builtin.user:
+    name: "{{ container_base_runner_user }}"
+    uid: "{{ container_base_runner_uid }}"
+    group: "{{ container_base_runner_group }}"
+    shell: "{{ container_base_runner_shell }}"
+    home: "{{ container_base_runner_home }}"
+    createhome: true
+    state: present
+
+- name: Configure sudoers for runner user (passwordless sudo)
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers.d/runner
+    line: "{{ container_base_runner_user }} ALL=(ALL) NOPASSWD:ALL"
+    state: present
+    create: true
+    mode: "0440"
+    validate: "visudo -cf %s"
+  when: container_base_sudo_nopasswd | bool
+
+- name: Enable and start SSH service
+  ansible.builtin.systemd:
+    name: ssh
+    enabled: true
+    state: started
+    daemon_reload: true

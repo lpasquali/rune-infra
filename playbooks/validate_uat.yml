@@ -1,0 +1,74 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# validate_uat.yml — Validate deployed runners and Rune product functionality
+
+---
+- name: Validate UAT runners and Rune product
+  hosts: localhost
+  gather_facts: true
+  vars:
+    max_runner_poll_attempts: 24
+    runner_poll_interval_seconds: 10
+    validation_start_time: "{{ ansible_date_time.iso8601 }}"
+
+  tasks:
+    - name: Poll GitHub API for runner registration
+      block:
+        - name: "Wait for runners to appear in GitHub (max {{ (max_runner_poll_attempts * runner_poll_interval_seconds) / 60 }} minutes)"
+          ansible.builtin.uri:
+            url: "{{ github_runner_github_api_url }}/orgs/{{ github_runner_github_org }}/actions/runners"
+            headers:
+              Authorization: "Bearer {{ github_runner_github_token }}"
+              Accept: "application/vnd.github+json"
+            method: GET
+          register: runners_response
+          until: (runners_response.json.runners | selectattr('name', 'match', 'gh-runner-.*') | list | length) >= (runner_count | int)
+          retries: "{{ max_runner_poll_attempts }}"
+          delay: "{{ runner_poll_interval_seconds }}"
+          no_log: true
+
+      rescue:
+        - name: Report runner registration timeout
+          ansible.builtin.fail:
+            msg: "Timeout waiting for runners to register with GitHub. Expected {{ runner_count }} runners."
+
+    - name: Poll for runners to come online
+      block:
+        - name: "Wait for runners to come online (max {{ (max_runner_poll_attempts * runner_poll_interval_seconds) / 60 }} minutes)"
+          ansible.builtin.uri:
+            url: "{{ github_runner_github_api_url }}/orgs/{{ github_runner_github_org }}/actions/runners"
+            headers:
+              Authorization: "Bearer {{ github_runner_github_token }}"
+              Accept: "application/vnd.github+json"
+            method: GET
+          register: runners_online_response
+          until: (runners_online_response.json.runners | selectattr('name', 'match', 'gh-runner-.*') | selectattr('status', 'equalto', 'online') | list | length) >= (runner_count | int)
+          retries: "{{ max_runner_poll_attempts }}"
+          delay: "{{ runner_poll_interval_seconds }}"
+          no_log: true
+
+      rescue:
+        - name: Report runner online timeout
+          ansible.builtin.fail:
+            msg: "Timeout waiting for runners to come online."
+
+    - name: Display runner status
+      ansible.builtin.debug:
+        msg: |
+          Runners Status:
+          {% for runner in runners_online_response.json.runners %}
+          - {{ runner.name }}: {{ runner.status }}
+          {% endfor %}
+
+    - name: Record validation results
+      ansible.builtin.set_fact:
+        validation_results:
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+          runners_registered: "{{ (runners_online_response.json.runners | selectattr('name', 'match', 'gh-runner-.*') | list | length) }}"
+          runners_online: "{{ (runners_online_response.json.runners | selectattr('name', 'match', 'gh-runner-.*') | selectattr('status', 'equalto', 'online') | list | length) }}"
+          status: "passed"
+
+    - name: Display validation results
+      ansible.builtin.debug:
+        msg: "{{ validation_results }}"

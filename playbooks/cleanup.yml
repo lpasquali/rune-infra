@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# cleanup.yml — Deregister and remove runners (teardown)
+
+---
+- name: Clean up runners and containers
+  hosts: localhost
+  gather_facts: true
+  vars:
+    runner_pattern: "gh-runner-.*"
+
+  pre_tasks:
+    - name: Log cleanup start
+      ansible.builtin.debug:
+        msg: "Starting cleanup of runners matching pattern: {{ runner_pattern }}"
+
+  tasks:
+    - name: Fetch all runners from GitHub
+      ansible.builtin.uri:
+        url: "{{ github_runner_github_api_url }}/orgs/{{ github_runner_github_org }}/actions/runners"
+        headers:
+          Authorization: "Bearer {{ github_runner_github_token }}"
+          Accept: "application/vnd.github+json"
+        method: GET
+      register: all_runners_response
+      no_log: true
+
+    - name: Filter runners to remove
+      ansible.builtin.set_fact:
+        runners_to_remove: "{{ all_runners_response.json.runners | selectattr('name', 'match', runner_pattern) | list }}"
+
+    - name: Deregister each runner
+      ansible.builtin.uri:
+        url: "{{ github_runner_github_api_url }}/orgs/{{ github_runner_github_org }}/actions/runners/{{ runner.id }}"
+        headers:
+          Authorization: "Bearer {{ github_runner_github_token }}"
+          Accept: "application/vnd.github+json"
+        method: DELETE
+        status_code: [204, 404]
+      loop: "{{ runners_to_remove }}"
+      loop_control:
+        loop_var: runner
+      no_log: true
+
+    - name: Display cleanup summary
+      ansible.builtin.debug:
+        msg: |
+          Cleanup Complete:
+          - Runners removed: {{ runners_to_remove | length }}
+          - Timestamp: {{ ansible_date_time.iso8601 }}
+
+  post_tasks:
+    - name: Log cleanup completion
+      ansible.builtin.debug:
+        msg: "Cleanup of {{ runners_to_remove | length }} runners completed successfully"

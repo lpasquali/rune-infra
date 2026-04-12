@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# requirements.yml — Ansible collection dependencies
+
+---
+collections:
+  - name: community.general
+    version: ">=9.0.0"

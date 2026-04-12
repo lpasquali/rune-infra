@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# deploy_runners.yml — Full GitHub Actions runner deployment
+
+---
+- name: Deploy GitHub Actions runners
+  hosts: localhost
+  gather_facts: true
+  vars:
+    runner_count: 1
+    lxc_container_name_prefix: "gh-runner"
+    container_nodes: "{{ groups.get('proxmox_hosts', ['localhost']) }}"
+
+  pre_tasks:
+    - name: Validate required variables
+      ansible.builtin.assert:
+        that:
+          - github_runner_github_token | length > 0
+        fail_msg: "github_runner_github_token is required"
+
+    - name: Set deployment facts
+      ansible.builtin.set_fact:
+        deployment_id: "{{ ansible_date_time.iso8601_basic_short }}"
+        deployed_runners: []
+
+  tasks:
+    - name: Deploy runner containers
+      block:
+        - name: Deploy each runner instance
+          ansible.builtin.include_tasks: deploy_single_runner.yml
+          loop: "{{ range(0, runner_count | int) | list }}"
+          loop_control:
+            loop_var: runner_index
+
+      rescue:
+        - name: Report deployment failure
+          ansible.builtin.fail:
+            msg: "Deployment failed. Some runners may have been partially deployed."
+
+  post_tasks:
+    - name: Save deployment manifest
+      ansible.builtin.copy:
+        content: |
+          {
+            "deployment_id": "{{ deployment_id }}",
+            "timestamp": "{{ ansible_date_time.iso8601 }}",
+            "runner_count": {{ runner_count }},
+            "deployed_runners": {{ deployed_runners | to_nice_json(indent=2) }}
+          }
+        dest: "{{ playbook_dir }}/deployment-manifest-{{ deployment_id }}.json"
+        mode: "0644"
+
+    - name: Display deployment summary
+      ansible.builtin.debug:
+        msg: |
+          Deployment Complete:
+          - Deployment ID: {{ deployment_id }}
+          - Runners Deployed: {{ deployed_runners | length }}
+          - Manifest: {{ playbook_dir }}/deployment-manifest-{{ deployment_id }}.json

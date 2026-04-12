@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# container_base/handlers/main.yml — Handlers for base container setup
+
+---
+- name: restart sshd
+  ansible.builtin.service:
+    name: ssh
+    state: restarted

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# docker_runtime/defaults/main.yml — Docker runtime installation defaults
+
+---
+# Docker installation
+docker_runtime_install: true
+docker_runtime_compose_version: "2.24.0"
+docker_runtime_add_user_to_docker_group: true
+docker_runtime_start_on_boot: true
+
+# Docker daemon configuration
+docker_runtime_storage_driver: "overlay2"
+docker_runtime_log_driver: "json-file"
+docker_runtime_log_max_size: "10m"
+docker_runtime_log_max_file: "3"

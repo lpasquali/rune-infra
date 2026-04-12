@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# build_tools/tasks/main.yml — Install build toolchain
+
+---
+- name: Update APT cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Install build tools packages
+  ansible.builtin.package:
+    name: "{{ build_tools_packages }}"
+    state: present
+
+- name: Configure git global user.name
+  community.general.git_config:
+    name: user.name
+    value: "{{ build_tools_git_user_name }}"
+    scope: global
+
+- name: Configure git global user.email
+  community.general.git_config:
+    name: user.email
+    value: "{{ build_tools_git_user_email }}"
+    scope: global
+
+- name: Configure git safe.directory
+  community.general.git_config:
+    name: safe.directory
+    value: "{{ build_tools_git_safe_directory }}"
+    scope: global
+
+- name: Verify git installation
+  ansible.builtin.command:
+    cmd: git --version
+  register: git_version
+  changed_when: false
+
+- name: Display git version
+  ansible.builtin.debug:
+    msg: "Git installed: {{ git_version.stdout }}"

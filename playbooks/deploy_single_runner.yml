@@ -1,0 +1,64 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# deploy_single_runner.yml — Deploy a single runner (called by deploy_runners.yml)
+
+---
+- name: "Deploy runner instance {{ runner_index + 1 }}"
+  hosts: localhost
+  gather_facts: false
+  vars:
+    runner_hostname: "{{ lxc_container_name_prefix }}-{{ runner_index }}"
+
+  tasks:
+    - name: "Set facts for runner {{ runner_index }}"
+      ansible.builtin.set_fact:
+        current_runner:
+          index: "{{ runner_index }}"
+          hostname: "{{ runner_hostname }}"
+          status: "deploying"
+          timestamp: "{{ ansible_date_time.iso8601 }}"
+
+    - name: "Log: Starting deployment of {{ runner_hostname }}"
+      ansible.builtin.debug:
+        msg: "Deploying runner {{ runner_index + 1 }}/{{ runner_count }}: {{ runner_hostname }}"
+
+    - name: "Configure container_base role for {{ runner_hostname }}"
+      ansible.builtin.include_role:
+        name: rune.infra.container_base
+      vars:
+        container_base_name: "{{ runner_hostname }}"
+        container_base_runner_home: "/home/ubuntu"
+
+    - name: "Install build tools on {{ runner_hostname }}"
+      ansible.builtin.include_role:
+        name: rune.infra.build_tools
+
+    - name: "Install Docker runtime on {{ runner_hostname }}"
+      ansible.builtin.include_role:
+        name: rune.infra.docker_runtime
+
+    - name: "Install language runtimes on {{ runner_hostname }}"
+      ansible.builtin.include_role:
+        name: rune.infra.runtime_env
+
+    - name: "Register GitHub Actions runner on {{ runner_hostname }}"
+      ansible.builtin.include_role:
+        name: rune.infra.github_runner
+      vars:
+        github_runner_name: "{{ runner_hostname }}"
+
+    - name: "Validate {{ runner_hostname }} deployment"
+      ansible.builtin.include_role:
+        name: rune.infra.runner_validation
+      vars:
+        runner_validation_report_file: "validation-{{ runner_hostname }}.json"
+
+    - name: "Mark {{ runner_hostname }} as deployed"
+      ansible.builtin.set_fact:
+        current_runner: "{{ current_runner | combine({'status': 'deployed'}) }}"
+        deployed_runners: "{{ deployed_runners + [current_runner] }}"
+
+    - name: "Log: Deployment of {{ runner_hostname }} completed"
+      ansible.builtin.debug:
+        msg: "Runner {{ runner_index + 1 }}/{{ runner_count }} deployed successfully"

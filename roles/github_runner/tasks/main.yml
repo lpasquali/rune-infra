@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# github_runner/tasks/main.yml — GitHub Actions runner setup
+
+---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - github_runner_github_token | length > 0
+    fail_msg: "github_runner_github_token is required"
+
+- name: Download and install GitHub Actions runner
+  ansible.builtin.include_tasks: install.yml
+
+- name: Register runner with GitHub
+  ansible.builtin.include_tasks: register.yml
+
+- name: Install and enable runner systemd service
+  ansible.builtin.include_tasks: service.yml

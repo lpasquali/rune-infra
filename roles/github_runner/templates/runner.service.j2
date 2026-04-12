@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# actions-runner.service — GitHub Actions runner systemd unit file
+# Managed by Ansible; do not edit manually
+
+[Unit]
+Description=GitHub Actions Runner
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ github_runner_install_dir }}/run.sh
+
+User={{ github_runner_user }}
+WorkingDirectory={{ github_runner_install_dir }}
+Restart={{ github_runner_service_restart }}
+RestartSec={{ github_runner_service_restart_sec }}
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=actions-runner
+
+# Allow the service to take some time to shut down gracefully
+KillMode=process
+TimeoutStopSec=5min
+
+[Install]
+WantedBy=multi-user.target

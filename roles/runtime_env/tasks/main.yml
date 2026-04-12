@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# runtime_env/tasks/main.yml — Install programming language runtimes
+
+---
+- name: Update APT cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+
+- name: Install Python runtime
+  ansible.builtin.package:
+    name: "{{ runtime_env_python_packages }}"
+    state: present
+
+- name: Upgrade pip and core packages
+  ansible.builtin.pip:
+    name: "{{ runtime_env_global_pip_packages }}"
+    state: present
+    executable: pip3
+
+- name: Verify Python installation
+  ansible.builtin.command:
+    cmd: python3 --version
+  register: python_version
+  changed_when: false
+
+- name: Display Python version
+  ansible.builtin.debug:
+    msg: "Python installed: {{ python_version.stdout }}"
+
+- name: Install Node.js (NodeSource repository)
+  block:
+    - name: Add NodeSource GPG key
+      ansible.builtin.apt_key:
+        url: "https://deb.nodesource.com/gpgkey/nodesource.gpg.key"
+        state: present
+
+    - name: Add NodeSource repository
+      ansible.builtin.apt_repository:
+        repo: "deb https://deb.nodesource.com/node_{{ runtime_env_nodejs_version }}.x nodistro main"
+        state: present
+        filename: nodesource
+
+    - name: Update APT cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install Node.js
+      ansible.builtin.package:
+        name: nodejs
+        state: present
+
+    - name: Verify Node.js installation
+      ansible.builtin.command:
+        cmd: node --version
+      register: nodejs_version
+      changed_when: false
+
+    - name: Display Node.js version
+      ansible.builtin.debug:
+        msg: "Node.js installed: {{ nodejs_version.stdout }}"
+
+  when: runtime_env_nodejs_install | bool

@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# github_runner/tasks/service.yml — Install and enable runner systemd service
+
+---
+- name: Install runner systemd service
+  ansible.builtin.template:
+    src: runner.service.j2
+    dest: "/etc/systemd/system/{{ github_runner_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: systemd daemon-reload
+
+- name: Flush handlers to reload systemd
+  ansible.builtin.meta: flush_handlers
+
+- name: Enable and start runner service
+  ansible.builtin.systemd:
+    name: "{{ github_runner_service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Verify runner service is active
+  ansible.builtin.systemd:
+    name: "{{ github_runner_service_name }}"
+  register: runner_service_status
+
+- name: Display runner service status
+  ansible.builtin.debug:
+    msg: "Runner service {{ runner_service_status.status.ActiveState }}"

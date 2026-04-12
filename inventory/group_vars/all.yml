@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# inventory/group_vars/all.yml — Global variables for all hosts
+
+---
+# Deployment configuration
+runner_count: 1
+lxc_container_name_prefix: "gh-runner"
+
+# Runner labels
+github_runner_labels:
+  - "rune-lan"
+  - "docker"
+
+# Timeouts and retries
+max_runner_poll_attempts: 24
+runner_poll_interval_seconds: 10

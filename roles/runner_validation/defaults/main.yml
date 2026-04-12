@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# runner_validation/defaults/main.yml — Post-deployment validation defaults
+
+---
+# Validation checks
+runner_validation_check_docker: true
+runner_validation_check_git: true
+runner_validation_check_build_tools: true
+runner_validation_check_runner_service: true
+runner_validation_check_github_registration: true
+
+# GitHub API configuration
+runner_validation_github_org: "lpasquali"
+runner_validation_github_repo: ""
+runner_validation_github_token: ""
+runner_validation_github_api_url: "https://api.github.com"
+
+# Validation report output
+runner_validation_report_dir: "{{ playbook_dir }}/validation-reports"
+runner_validation_report_file: "validation-report-{{ inventory_hostname }}.json"

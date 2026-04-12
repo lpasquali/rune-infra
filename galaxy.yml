@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# galaxy.yml — Ansible collection metadata for rune.infra
+# Proxmox LXC GitHub Actions runner deployment and validation
+
+namespace: rune
+name: infra
+version: 1.0.0
+readme: README.md
+authors:
+  - lpasquali
+
+description: |
+  Ansible collection to deploy and validate GitHub Actions self-hosted runners
+  on Proxmox LXC containers. Includes UAT merge gate integration for Rune product
+  validation via automated GitHub Actions workflows.
+
+license:
+  - Apache-2.0
+
+tags:
+  - proxmox
+  - github_actions
+  - runners
+  - lxc
+  - infrastructure
+  - ci_cd
+  - uat
+  - automation
+
+repository: https://github.com/lpasquali/rune-infra
+documentation: https://github.com/lpasquali/rune-infra#readme
+issues: https://github.com/lpasquali/rune-infra/issues
+
+dependencies: {}

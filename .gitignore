@@ -1,0 +1,41 @@
+# Ansible and Python
+*.pyc
+__pycache__/
+*.egg-info/
+.Python
+venv/
+env/
+.venv
+
+# Ansible
+*.retry
+roles/*/files/*.tar.gz
+roles/*/files/*.zip
+*.vault
+
+# Proxmox and infrastructure secrets (never commit)
+inventory/group_vars/proxmox*.yml
+inventory/host_vars/*.yml
+secrets/
+.env
+.env.local
+credentials.json
+ssh_key
+ssh_key.pub
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CI/CD artifacts
+artifacts/
+logs/
+.github/workflows/*.local.yml
+
+# Documentation build artifacts
+docs/_build/
+site/

@@ -1,0 +1,64 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# github_runner/tasks/register.yml — Register runner with GitHub
+
+---
+- name: Determine runner name
+  ansible.builtin.set_fact:
+    _runner_name: "{{ github_runner_name | default(inventory_hostname) }}"
+
+- name: Determine GitHub API endpoint
+  block:
+    - name: Set org-level registration endpoint
+      ansible.builtin.set_fact:
+        _registration_url: "{{ github_runner_github_api_url }}/orgs/{{ github_runner_github_org }}/actions/runners/registration-token"
+        _github_url: "https://github.com/{{ github_runner_github_org }}"
+      when: github_runner_github_repo | length == 0
+
+    - name: Set repo-level registration endpoint
+      ansible.builtin.set_fact:
+        _registration_url: "{{ github_runner_github_api_url }}/repos/{{ github_runner_github_org }}/{{ github_runner_github_repo }}/actions/runners/registration-token"
+        _github_url: "https://github.com/{{ github_runner_github_org }}/{{ github_runner_github_repo }}"
+      when: github_runner_github_repo | length > 0
+
+- name: Request registration token from GitHub API
+  ansible.builtin.uri:
+    url: "{{ _registration_url }}"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ github_runner_github_token }}"
+      Accept: "application/vnd.github+json"
+    status_code: 201
+  register: registration_token_response
+  no_log: true
+
+- name: Set registration token fact
+  ansible.builtin.set_fact:
+    _registration_token: "{{ registration_token_response.json.token }}"
+  no_log: true
+
+- name: Configure runner
+  ansible.builtin.shell:
+    cmd: |
+      ./config.sh \
+        --url {{ _github_url }} \
+        --token {{ _registration_token }} \
+        --name {{ _runner_name }} \
+        --work {{ github_runner_work_dir }} \
+        --runnergroup "{{ github_runner_runner_group }}" \
+        --unattended \
+        {% if github_runner_ephemeral %}--ephemeral{% endif %} \
+        {% if github_runner_disable_update %}--disableupdate{% endif %}
+    chdir: "{{ github_runner_install_dir }}"
+    executable: /bin/bash
+  become: true
+  become_user: "{{ github_runner_user }}"
+  no_log: true
+  changed_when: true
+  register: config_result
+
+- name: Display runner configuration output
+  ansible.builtin.debug:
+    msg: "Runner configured successfully"
+  when: config_result.rc == 0

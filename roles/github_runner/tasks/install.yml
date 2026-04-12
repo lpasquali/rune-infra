@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 RUNE Contributors
+#
+# github_runner/tasks/install.yml — Download and install runner binary
+
+---
+- name: Create runner installation directory
+  ansible.builtin.file:
+    path: "{{ github_runner_install_dir }}"
+    state: directory
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_group }}"
+    mode: "0755"
+
+- name: Check if runner is already installed
+  ansible.builtin.stat:
+    path: "{{ github_runner_install_dir }}/run.sh"
+  register: runner_binary_stat
+
+- name: Download runner binary
+  block:
+    - name: Download runner release
+      ansible.builtin.get_url:
+        url: "https://github.com/actions/runner/releases/download/v{{ github_runner_version }}/actions-runner-linux-{{ github_runner_arch }}-{{ github_runner_version }}.tar.gz"
+        dest: "/tmp/actions-runner.tar.gz"
+        mode: "0644"
+      register: runner_download
+
+    - name: Download runner checksum
+      ansible.builtin.get_url:
+        url: "https://github.com/actions/runner/releases/download/v{{ github_runner_version }}/actions-runner-linux-{{ github_runner_arch }}-{{ github_runner_version }}.tar.gz.sha256"
+        dest: "/tmp/actions-runner.tar.gz.sha256"
+        mode: "0644"
+
+    - name: Verify runner binary checksum
+      ansible.builtin.shell:
+        cmd: "cd /tmp && sha256sum -c actions-runner.tar.gz.sha256"
+      changed_when: false
+      register: checksum_result
+
+    - name: Extract runner binary
+      ansible.builtin.unarchive:
+        src: "/tmp/actions-runner.tar.gz"
+        dest: "{{ github_runner_install_dir }}"
+        remote_src: true
+        owner: "{{ github_runner_user }}"
+        group: "{{ github_runner_group }}"
+
+    - name: Clean up downloaded files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/actions-runner.tar.gz
+        - /tmp/actions-runner.tar.gz.sha256
+
+  when: not runner_binary_stat.stat.exists
